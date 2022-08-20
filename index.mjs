@@ -11,6 +11,7 @@ class ThreadGrabber {
     THREADS_LOCATION
     THREAD_LIST
     client
+    allThreads
 
     constructor(config) {
         this.MEDIA_LOCATION = config.MEDIA_LOCATION
@@ -78,10 +79,15 @@ class ThreadGrabber {
      * Given a media object, finds the file and saves it to disk.
      */
     storeMedia = async (media) => {
-        console.log(media)
-        const res = await fetch(media.url);
+        let mediaLocation
+        if (media.type == 'animated_gif') {
+            mediaLocation = media.variants[0].url
+        } else {
+            mediaLocation = media.url
+        }
+        let res = await fetch(mediaLocation);
         if (res.ok) {
-            let extension = parse(media.url).ext
+            let extension = parse(mediaLocation).ext
             let localFile = this.MEDIA_LOCATION + media.media_key + extension
             await fs.writeFile(localFile, Buffer.from(await (await res.blob()).arrayBuffer()))
             return localFile
@@ -102,7 +108,6 @@ class ThreadGrabber {
      */
     storeTweet = async (tweetId, expand = false) => {
         let nextTweet = false
-        console.log(this.client)
         let tweet = await this.client.v2.singleTweet(tweetId, {
             expansions: [
                 'attachments.media_keys'
@@ -110,7 +115,8 @@ class ThreadGrabber {
             "media.fields": [
                 'media_key',
                 'type',
-                'url'
+                'url',
+                'variants'
             ],
             "tweet.fields": [
                 'referenced_tweets'
@@ -157,28 +163,31 @@ class ThreadGrabber {
     /**
      * Loads all the threads on disk so we can do stuff with them
      */
-    loadThreads() {
+    async loadThreads() {
         let allThreads = []
-        let dirs = fs.readdirSync(this.THREADS_LOCATION)
+        let dirs = await fs.readdir(this.THREADS_LOCATION)
         for (let file of dirs) {
-            let thread = JSON.parse(fs.readFileSync(this.THREADS_LOCATION + file, { encoding: 'utf-8' }))
+            let thread = JSON.parse(await fs.readFile(this.THREADS_LOCATION + file, { encoding: 'utf-8' }))
             let expandedThread = []
-            for (let tweet of thread) {
-                expandedThread.push(loadTweet(tweet))
+            for (let tweet of thread.tweets) {
+                expandedThread.push(await this.loadTweet(tweet))
             }
             allThreads.push({
+                name: thread.name,
+                index: thread.index,
                 slug: file.split('.')[0],
                 tweets: expandedThread
             })
         }
+        this.allThreads = allThreads
         return allThreads
     }
 
     /**
      * Loads a single tweet's metadata from disk
      */
-    loadTweet = (tweetId) => {
-        let tweet = JSON.parse(fs.readFileSync(this.TWEETS_LOCATION + tweetId + '.json'))
+    loadTweet = async (tweetId) => {
+        let tweet = JSON.parse(await fs.readFile(this.TWEETS_LOCATION + tweetId + '.json'))
         return tweet
     }
 

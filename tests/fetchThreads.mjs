@@ -8,7 +8,7 @@ let tg = new ThreadGrabber({
 })
 tg.fetchThreads([
     {
-        index: 5,
+        index: 3,
         title: "Elizabeth 1",
         endOfThread: "https://twitter.com/seldo/status/1410605124553109505"
     },
