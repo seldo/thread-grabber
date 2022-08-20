@@ -1,0 +1,5 @@
+{
+    "MEDIA_LOCATION":  "./scratch/media/",
+    "TWEETS_LOCATION": "./scratch/tweets/",
+    "THREADS_LOCATION": "./scratch/threads/"
+}
