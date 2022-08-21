@@ -10,6 +10,7 @@ class ThreadGrabber {
     TWEETS_LOCATION
     THREADS_LOCATION
     THREAD_LIST
+    INDEX_THREAD_FILES
     client
     allThreads
 
@@ -17,6 +18,7 @@ class ThreadGrabber {
         this.MEDIA_LOCATION = config.MEDIA_LOCATION
         this.TWEETS_LOCATION = config.TWEETS_LOCATION
         this.THREADS_LOCATION = config.THREADS_LOCATION
+        this.INDEX_THREAD_FILES = config.INDEX_THREAD_FILES
 
         if (config.client) {
             this.client = config.client
@@ -71,6 +73,9 @@ class ThreadGrabber {
         }
 
         let threadFileName = threadName.toLowerCase().replace(/[/\\?%*:|"<>,]/g, '').replace(/[ &]/g, '_');
+        if (this.INDEX_THREAD_FILES) {
+            threadFileName = threadIndex + "__" + threadFileName
+        }
 
         await fs.writeFile(this.THREADS_LOCATION + threadFileName + '.json', JSON.stringify(thread))
     }
