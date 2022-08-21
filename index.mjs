@@ -1,6 +1,5 @@
 import fs from 'node:fs/promises'
 import { TwitterApi } from 'twitter-api-v2';
-import util from 'node:util'
 import { parse } from 'node:path'
 import { Buffer } from 'node:buffer'
 
@@ -13,6 +12,21 @@ class ThreadGrabber {
     INDEX_THREAD_FILES
     client
     allThreads
+    metaConfig = {
+        expansions: [
+            'attachments.media_keys'
+        ],
+        "media.fields": [
+            'media_key',
+            'type',
+            'url',
+            'variants'
+        ],
+        "tweet.fields": [
+            'referenced_tweets',
+            'public_metrics'
+        ]
+    }
 
     constructor(config) {
         this.MEDIA_LOCATION = config.MEDIA_LOCATION
@@ -101,6 +115,18 @@ class ThreadGrabber {
         }
     }
 
+    /** Fetch a single tweet from the API with the fields we care about */
+    fetchTweet = async (tweetId) => {
+        let tweet = await this.client.v2.singleTweet(tweetId,this.metaConfig);
+        return tweet
+    }
+
+    /** Fetch multiple tweets at the same time */
+    fetchTweets = async (idList) => {
+        let tweets = await this.client.v2.tweets(idList,this.metaConfig);
+        return tweets.data
+    }
+
     /**
      * Given a tweet ID, fetch that tweet and saves it to disk
      * including any media in the tweet.
@@ -113,21 +139,7 @@ class ThreadGrabber {
      */
     storeTweet = async (tweetId, expand = false) => {
         let nextTweet = false
-        let tweet = await this.client.v2.singleTweet(tweetId, {
-            expansions: [
-                'attachments.media_keys'
-            ],
-            "media.fields": [
-                'media_key',
-                'type',
-                'url',
-                'variants'
-            ],
-            "tweet.fields": [
-                'referenced_tweets'
-            ]
-        });
-        console.log(util.inspect(tweet, { depth: null }))
+        let tweet = await this.fetchTweet(tweetId)
         // store any media
         let tweetMedia = null
         if (tweet.includes && tweet.includes.media) {
@@ -160,7 +172,8 @@ class ThreadGrabber {
             id: tweet.data.id,
             text: tweet.data.text,
             ...(tweetMedia && { media: tweetMedia }),
-            subtweets
+            subtweets,
+            public_metrics: tweet.data.public_metrics
         }))
         return nextTweet
     }
